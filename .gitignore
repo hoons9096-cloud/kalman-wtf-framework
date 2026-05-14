@@ -1,0 +1,43 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Distribution / packaging
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Paper draft (kept private during peer review)
+paper/
+manuscript/
+*.docx
+*.pdf
+!notebooks/*.pdf
+
+# Local data
+data/private/
+data_raw/
+
+# Claude / AI agent
+.claude/
+CLAUDE.md
