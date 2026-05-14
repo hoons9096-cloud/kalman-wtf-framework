@@ -12,6 +12,7 @@ from .dynamic_sy import generate_dynamic_sy, DEFAULT_VG_PARAMS
 from .aquifer_state import simulate_aquifer
 from .pumping_disturbance import inject_pumping, PumpingEvent, PumpingTruth
 from .observation import apply_observation_process
+from .export_for_matlab import export, export_all_scenarios
 
 __all__ = [
     "ScenarioConfig",
@@ -27,4 +28,6 @@ __all__ = [
     "PumpingEvent",
     "PumpingTruth",
     "apply_observation_process",
+    "export",
+    "export_all_scenarios",
 ]
