@@ -92,6 +92,10 @@ def export(
         "annual_recharge_true_mm": float(well.annual_recharge_mm()),
         "tau_lag_true_days": float(well.config.tau_lag_days),
         "sy_true": well.sy_true.tolist(),
+        "sy_operational_true": float(
+            (np.asarray(well.recharge_mm).sum() / 1000.0) /
+            max(np.maximum(np.diff(well.h_true_m), 0).sum(), 1e-9)
+        ),
         "h_true_natural_m": well.h_true_m.tolist(),
         "h_with_pumping_m": well.h_with_pumping_m.tolist(),
         # Pumping ground truth

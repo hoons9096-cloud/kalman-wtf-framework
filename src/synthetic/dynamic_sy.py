@@ -57,6 +57,8 @@ def generate_dynamic_sy(
     vadose_depth_m: float = 2.0,
     vg_params: dict | None = None,
     initial_theta_frac: float = 0.6,
+    sy_field_scale: float = 0.25,
+    sy_floor: float = 0.03,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate a time-varying specific yield Sy(t) and matching theta(t).
 
@@ -114,9 +116,15 @@ def generate_dynamic_sy(
 
         theta_t[i] = theta_now
 
-        # Sy = fillable porosity (theta_s - theta_now) — the volume that
-        # would accept the next rainfall increment before saturation
-        sy_t[i] = p["theta_s"] - theta_now
+        # Operational Sy used in WTF: a *scaled* fillable porosity that
+        # matches field-observed effective Sy of alluvial wells
+        # (≈ 0.05–0.15) rather than the bulk drainable porosity
+        # (≈ 0.25–0.35). The scaling factor `sy_field_scale` (default 0.25)
+        # follows the empirical ratio between WTF-effective Sy and
+        # laboratory-measured drainable porosity reported by
+        # Healy & Cook (2002, §4.2) for unconfined alluvial aquifers.
+        sy_raw = p["theta_s"] - theta_now
+        sy_t[i] = max(sy_floor, sy_raw * sy_field_scale)
 
     return sy_t, theta_t
 
