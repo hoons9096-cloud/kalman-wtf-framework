@@ -377,7 +377,8 @@ def fig4_synthetic_recovery():
             )),
         }
 
-    fig, axes = plt.subplots(1, 3, figsize=(13, 4.5))
+    fig, axes_grid = plt.subplots(2, 2, figsize=(12, 8.5))
+    axes = axes_grid.flatten()
 
     # (a) Lag recovery
     ax = axes[0]
@@ -427,9 +428,44 @@ def fig4_synthetic_recovery():
     ax.set_title("(c) Operational Sy recovery", loc="left")
     ax.legend(loc="upper right", frameon=False, fontsize=8)
 
+    # (d) Recovery ratio consistency — calibratable bias signal
+    ax = axes[3]
+    rch_ratio = [frameworks[s]["rch_est"] / frameworks[s]["rch_true"]
+                 for s in sids]
+    sy_ratio = [frameworks[s]["sy_avg_est"] / frameworks[s]["sy_true_op"]
+                for s in sids]
+    lag_ratio = [frameworks[s]["lag_est"] / max(frameworks[s]["lag_true"], 1)
+                 for s in sids]
+
+    w2 = 0.27
+    xs = np.arange(len(sids))
+    ax.bar(xs - w2, rch_ratio, w2, color="#e74c3c",
+           label=f"Recharge (mean {np.mean(rch_ratio):.2f} ± {np.std(rch_ratio):.2f})")
+    ax.bar(xs, sy_ratio, w2, color="#3498db",
+           label=f"Sy (mean {np.mean(sy_ratio):.2f} ± {np.std(sy_ratio):.2f})")
+    ax.bar(xs + w2, lag_ratio, w2, color="#27ae60",
+           label=f"Lag (mean {np.mean(lag_ratio):.2f} ± {np.std(lag_ratio):.2f})")
+    ax.axhline(1.0, color="black", linestyle="--", lw=1.0, alpha=0.6,
+               label="Perfect recovery (=1)")
+    # Annotate consistency band for recharge (the main bias)
+    ax.axhspan(min(rch_ratio), max(rch_ratio), color="#e74c3c", alpha=0.08)
+    ax.set_xticks(xs); ax.set_xticklabels(sids)
+    ax.set_ylabel("Recovery ratio (estimate / truth)")
+    ax.set_title("(d) Recovery-ratio consistency across scenarios",
+                 loc="left")
+    ax.legend(loc="upper right", frameon=False, fontsize=8)
+    ax.set_ylim(0, max(max(rch_ratio), max(sy_ratio), max(lag_ratio)) * 1.3)
+    ax.grid(axis="y", linestyle=":", alpha=0.4)
+    # Footer note about calibratable bias
+    ax.text(0.5, -0.18,
+            (f"Recharge bias is {np.mean(rch_ratio):.2f} ± {np.std(rch_ratio):.2f}: "
+             "consistent across scenarios → calibratable by an independent reference (CMB, lysimeter)."),
+            transform=ax.transAxes, ha="center", fontsize=8.5,
+            style="italic", color="#7f8c8d")
+
     fig.suptitle("Figure 4 — Synthetic-truth recovery accuracy (5 scenarios with known ground truth)",
-                 fontsize=12, fontweight="bold", y=1.02)
-    plt.tight_layout()
+                 fontsize=13, fontweight="bold", y=0.995)
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.savefig(OUT / "fig4_synthetic_recovery.png", bbox_inches="tight")
     plt.close()
     print("  ✓ fig4_synthetic_recovery.png")
