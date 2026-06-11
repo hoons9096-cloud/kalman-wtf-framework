@@ -62,3 +62,6 @@ PHASE_A_RESULTS.md
 # Field data (unpublished — kept local)
 data/field/
 data/field_identifiability.csv
+
+# MATLAB GUI port (kept local — depends on user-side filpor_tr.m etc.)
+matlab/
