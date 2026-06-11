@@ -21,7 +21,8 @@ sys.path.insert(0, str(ROOT / "src"))
 from framework.io import load_well
 from framework.pumping_detection import remove_outliers
 from framework_v2.free_sy_inversion import invert_free_sy
-from framework_v2.water_balance import constrain_recharge
+from framework_v2.pumping_robust import estimate_U_pumping_robust
+from framework_v2.water_balance import constrain_recharge, constrain_recharge_from_U
 
 FIELD = ROOT / "data" / "field"
 WELLS = ["SH08", "SH11", "SH22", "SH23", "SH28"]
@@ -37,10 +38,11 @@ def run() -> pd.DataFrame:
         gw = remove_outliers(w.gw_m, sensitivity=2.0)
         yr = w.n_days / 365.25
         P = float(np.nansum(w.rain_m)) * 1000.0 / yr
-        r = invert_free_sy(w.rain_m, gw, smooth_window=SMOOTH_WINDOW)
-        c = constrain_recharge(r, P)
+        # pumping-robust head-input estimator (rejects pumping recovery)
+        pr = estimate_U_pumping_robust(w.rain_m, gw)
+        c = constrain_recharge_from_U(pr.U_annual_mm, pr.n_years, P)
         rows.append(dict(
-            well=name, n_days=w.n_days, P_mm=P, k=r.k,
+            well=name, n_days=w.n_days, P_mm=P, k=pr.k,
             U_mm=c.U_annual_mm, sy_joint=c.sy_joint,
             rch_mm=c.rch_joint_mm, rch_lo=c.rch_joint_lo_mm,
             rch_hi=c.rch_joint_hi_mm, rch_pct=100 * c.rch_joint_mm / P,

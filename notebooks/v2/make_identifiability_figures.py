@@ -111,7 +111,49 @@ def fig3():
     fig.tight_layout(); fig.savefig(FIG / "fig3_sensitivity.png", dpi=130)
 
 
+def fig4():
+    """Recession-baseline reconstruction illustration (sand well, pumping)."""
+    from synthetic.soil_ensemble import generate_ensemble
+    from framework_v2.pumping_robust import estimate_U_pumping_robust
+    wells = generate_ensemble(seed=0, sensor_noise_std_m=0.0)
+    w = [x for x in wells if x.sn == 1][0]
+    pr = estimate_U_pumping_robust(w.rain_m, w.gw_m, smooth_window=5)
+    days = np.arange(len(w.gw_m)); sl = slice(250, 520)
+    fig, ax = plt.subplots(figsize=(9, 4.2))
+    ax.plot(days[sl], w.gw_m[sl], '-', color='0.5', lw=1.2, label='observed (with pumping)')
+    ax.plot(days[sl], w.h_true_m[sl], 'g-', lw=1.0, alpha=0.7, label='true natural head')
+    ax.plot(days[sl], pr.h_reconstructed[sl], 'b-', lw=1.8, label='reconstructed baseline')
+    ax.set_xlabel('day'); ax.set_ylabel('head (m)')
+    ax.set_title('Recession-baseline reconstruction rejects pumping recovery')
+    ax.legend(fontsize=8, loc='upper right'); ax.grid(alpha=0.3)
+    fig.tight_layout(); fig.savefig(FIG / "fig4_reconstruction.png", dpi=130); plt.close(fig)
+
+
+def fig5():
+    """Recovery RMSE by regime: moving-average vs reconstruction."""
+    from synthetic.soil_ensemble import generate_ensemble
+    from framework_v2.pumping_robust import estimate_U_pumping_robust
+    regimes = {"clean": dict(n_pump_per_year=0.0, sensor_noise_std_m=0.0),
+               "noise": dict(n_pump_per_year=0.0),
+               "pumping": dict(sensor_noise_std_m=0.0), "full": dict()}
+    ma, rc = [], []
+    for kw in regimes.values():
+        ws = generate_ensemble(seed=0, **kw)
+        rma = np.array([x.sy_eff_true * invert_free_sy(x.rain_m, x.gw_m, smooth_window=7).U_head_m
+                        * 1000 / (len(x.gw_m) / 365.25) / x.annual_recharge_true_mm for x in ws])
+        rrc = np.array([x.sy_eff_true * estimate_U_pumping_robust(x.rain_m, x.gw_m).U_annual_mm
+                        / x.annual_recharge_true_mm for x in ws])
+        ma.append(np.sqrt(np.mean((rma - 1) ** 2))); rc.append(np.sqrt(np.mean((rrc - 1) ** 2)))
+    x = np.arange(4); fig, ax = plt.subplots(figsize=(7, 4.2)); wb = 0.38
+    ax.bar(x - wb / 2, ma, wb, label='moving-average U', color='salmon')
+    ax.bar(x + wb / 2, rc, wb, label='recession-reconstruction U', color='steelblue')
+    ax.set_xticks(x); ax.set_xticklabels(list(regimes)); ax.set_ylabel('recharge recovery RMSE')
+    ax.set_title('Pumping-robust input estimation: recovery error by regime')
+    ax.legend(fontsize=9); ax.grid(alpha=0.3, axis='y')
+    fig.tight_layout(); fig.savefig(FIG / "fig5_pumping_benchmark.png", dpi=130); plt.close(fig)
+
+
 if __name__ == "__main__":
     FIG.mkdir(parents=True, exist_ok=True)
-    fig1(); fig2(); fig3()
+    fig1(); fig2(); fig3(); fig4(); fig5()
     print(f"  ✓ figures written to {FIG}")

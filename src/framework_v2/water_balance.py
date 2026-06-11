@@ -135,9 +135,45 @@ def constrain_recharge(
     )
 
 
+def constrain_recharge_from_U(
+    U_annual_mm: float,
+    n_years: float,
+    annual_rain_mm: float,
+    sy_prior_mean: float = DEFAULT_SY_PRIOR_MEAN,
+    sy_prior_std: float = DEFAULT_SY_PRIOR_STD,
+    rch_coef_mean: float = DEFAULT_RCH_COEF_MEAN,
+    rch_coef_std: float = DEFAULT_RCH_COEF_STD,
+) -> ConstrainedRecharge:
+    """Dual-constraint identification from a pre-computed annual head-input
+    integral U' (mm yr⁻¹), e.g. from the pumping-robust estimator. Same
+    fusion as `constrain_recharge` but decoupled from `FreeSyResult`."""
+    U_annual = max(U_annual_mm, 1e-9)
+    syA, syA_s = sy_prior_mean, sy_prior_std
+    rch_B = rch_coef_mean * annual_rain_mm
+    rch_B_s = rch_coef_std * annual_rain_mm
+    syB = rch_B / U_annual
+    syB_s = rch_B_s / U_annual
+    sy_j, sy_j_s = _gaussian_combine(syA, syA_s, syB, syB_s)
+    rch_j = sy_j * U_annual
+    consistency = abs(syA - syB) / np.sqrt(syA_s ** 2 + syB_s ** 2)
+    return ConstrainedRecharge(
+        U_annual_mm=float(U_annual), annual_rain_mm=float(annual_rain_mm),
+        sy_prior_mean=float(syA), sy_prior_std=float(syA_s),
+        rch_sy_prior_mm=float(syA * U_annual),
+        sy_wb_mean=float(syB), sy_wb_std=float(syB_s),
+        rch_wb_mm=float(rch_B),
+        sy_joint=float(sy_j), sy_joint_std=float(sy_j_s),
+        rch_joint_mm=float(rch_j),
+        rch_joint_lo_mm=float((sy_j - sy_j_s) * U_annual),
+        rch_joint_hi_mm=float((sy_j + sy_j_s) * U_annual),
+        consistency_sigma=float(consistency),
+    )
+
+
 __all__ = [
     "ConstrainedRecharge",
     "constrain_recharge",
+    "constrain_recharge_from_U",
     "DEFAULT_RCH_COEF_MEAN",
     "DEFAULT_RCH_COEF_STD",
 ]
