@@ -72,12 +72,16 @@ class SoilWell:
 
 
 def _effective_true_sy(h_true: np.ndarray, recharge_mm: np.ndarray,
-                       k: float, h_base: float = 0.0) -> float:
+                       k: float, rain_m: np.ndarray,
+                       h_base: float = 0.0, r_cutoff_m: float = 0.002) -> float:
     """True effective Sy = total recharge / recession-corrected positive
-    head-input integral, using the *true* head and recession constant."""
+    head-input integral, evaluated on the *noise-free* true head with the
+    *same rain-masked* definition the estimator uses, so that the true Sy
+    combined with a clean-head U recovers unity by construction."""
     dh = np.diff(h_true)
     u = dh + k * (h_true[:-1] - h_base)
-    U = float(np.sum(np.maximum(u, 0.0)))
+    mask = rain_m[:len(u)] > r_cutoff_m
+    U = float(np.sum(np.where(mask, np.maximum(u, 0.0), 0.0)))
     R = float(np.nansum(recharge_mm)) / 1000.0
     return R / U if U > 0 else np.nan
 
@@ -134,7 +138,7 @@ def generate_soil_well(
         name=f"{s['name'].replace(' ', '')}_{sn}", sn=sn, texture=s["name"],
         rain_m=rain, gw_m=h_obs, h_true_m=h_true, sy_true_series=sy_true,
         annual_recharge_true_mm=float(np.nansum(recharge) / 1000.0 * 1000.0 / n_years),
-        sy_eff_true=_effective_true_sy(h_true, recharge, k_per_day),
+        sy_eff_true=_effective_true_sy(h_true, recharge, k_per_day, rain),
         k_true=k_per_day,
         annual_rain_mm=float(rain.sum()) * 1000.0 / n_years,
     )
