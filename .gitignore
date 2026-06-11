@@ -55,5 +55,13 @@ data/benchmark_*.csv
 data/field_v2*.csv
 data/ablation_sh22.csv
 data/sh22_sn_sweep.csv
+data/honest_benchmark.csv
 data/kma_pressure/
 PHASE_A_RESULTS.md
+
+# Field data (unpublished — kept local)
+data/field/
+data/field_identifiability.csv
+
+# MATLAB GUI port (kept local — depends on user-side filpor_tr.m etc.)
+matlab/
