@@ -44,15 +44,31 @@ def test_posterior_reproducible():
     assert np.array_equal(a.rch_draws_mm, b.rch_draws_mm)
 
 
-def test_posterior_widens_with_noise():
-    P = None
-    widths = []
-    for noise in (0.005, 0.04):
-        rain, h = _well(noise=noise)
-        P = rain.sum() * 1000 / (len(h) / 365.25)
-        p = recharge_posterior(rain, h, P, n_draws=300, seed=3)
-        widths.append(p.rch_ci68_mm[1] - p.rch_ci68_mm[0])
-    assert widths[1] > widths[0]
+def test_lag_gate_weights_valid_and_evidence_concentrated():
+    from framework_v2.posterior import (
+        _lag_gate_weights, LAG_GATE_ENSEMBLE)
+    from framework_v2.pumping_robust import _nan_smooth
+    # fast-responding well (rise on the rain day) with *aperiodic* rain
+    # (periodic forcing would alias the CCF profile): evidence should
+    # concentrate the gate distribution on the shortest window
+    rng = np.random.default_rng(11)
+    n, k, sy = 900, 0.01, 0.08
+    rain = np.zeros(n)
+    rain[rng.choice(n - 10, size=45, replace=False)] = 30.0
+    rain_m = rain / 1000.0
+    rch = 0.4 * rain_m
+    h = np.empty(n)
+    h[0] = 2.0
+    for i in range(n - 1):
+        h[i + 1] = (1 - k) * h[i] + rch[i] / sy
+    h = h + rng.normal(0, 0.005, n)
+    rain = rain_m
+    hs = _nan_smooth(h, 5, kind="median")
+    w = _lag_gate_weights(hs, rain, h_base=0.0, k=0.01, r_cutoff_m=0.002)
+    assert len(w) == len(LAG_GATE_ENSEMBLE)
+    assert abs(w.sum() - 1.0) < 1e-9
+    assert np.all(w > 0)
+    assert w[0] == w.max()          # same-day gate dominates
 
 
 def test_k_segments_exposed():

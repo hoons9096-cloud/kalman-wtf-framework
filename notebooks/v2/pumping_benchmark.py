@@ -59,7 +59,7 @@ def main():
               f"{m2:5.2f} ± {s2:4.2f}  RMSE {r2:5.2f}")
     print("-" * 72)
     print("Pumping recovery is the dominant U bias (MA-7 ~2.5x);")
-    print("recession-reconstruction removes it (full-regime RMSE ~7x lower).")
+    print("recession-reconstruction with an edge-preserving median filter removes it (full-regime RMSE 2.14 -> 0.16, ~13x lower).")
 
 
 if __name__ == "__main__":

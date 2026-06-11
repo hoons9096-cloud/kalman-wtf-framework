@@ -54,10 +54,16 @@ DEFAULT_BIAS_FACTOR_MEAN = 1.18
 DEFAULT_BIAS_FACTOR_STD = 0.06
 SMOOTH_ENSEMBLE = (3, 5, 7)
 # Rain-gate lag windows marginalised as structural uncertainty: the vadose
-# delay that maps rainfall to water-table arrival is uncertain (CCF peak
-# estimates are weak; Section 2.5), so the admitted-day window is drawn
-# from a small ensemble spanning no-lag to a generous shallow-alluvium lag.
-LAG_GATE_ENSEMBLE = (0, 7, 14, 21)
+# delay that maps rainfall to water-table arrival is uncertain (CCF *peak*
+# estimates are unreliable; Section 2.5), so the admitted-day window is
+# drawn from an ensemble spanning no-lag to a generous shallow-alluvium
+# lag. The ensemble is *evidence-weighted*: each window's probability is
+# the incremental positive rain->input cross-correlation mass it admits,
+# so a fast-responding well concentrates the draws on short gates (CI
+# tightens) while a slow/ambiguous response keeps them spread (CI stays
+# honest). A floor keeps every window reachable.
+LAG_GATE_ENSEMBLE = (0, 7, 14, 21, 28)
+LAG_GATE_WEIGHT_FLOOR = 0.05
 
 
 @dataclass
@@ -90,6 +96,36 @@ def _weighted_bootstrap_k(k_segs: np.ndarray, weights: np.ndarray,
         cw = np.cumsum(ws[order])
         draws[i] = ks[order][np.searchsorted(cw, 0.5 * cw[-1])]
     return np.maximum(draws, 1e-4)
+
+
+def _lag_gate_weights(h_smooth: np.ndarray, po: np.ndarray, h_base: float,
+                      k: float, r_cutoff_m: float) -> np.ndarray:
+    """Evidence weights for the lag-gate ensemble from the positive
+    rain->input cross-correlation profile of the reconstructed series."""
+    hat = reconstruct_recession_baseline(h_smooth - h_base, k)
+    n = len(hat)
+    u = np.zeros(n)
+    for t in range(n - 1):
+        if np.isfinite(hat[t]) and np.isfinite(hat[t + 1]):
+            u[t] = max((hat[t + 1] - hat[t]) + k * hat[t], 0.0)
+    r = np.where(np.isfinite(po[:n]), po[:n], 0.0)
+    max_lag = LAG_GATE_ENSEMBLE[-1] + 6
+    c = np.zeros(max_lag + 1)
+    for L in range(max_lag + 1):
+        a = r[:-L] if L else r
+        b = u[L:] if L else u
+        if len(a) > 30 and a.std() > 0 and b.std() > 0:
+            c[L] = max(float(np.corrcoef(a, b)[0, 1]), 0.0)
+    cum = np.cumsum(c)
+    total = max(cum[-1], 1e-12)
+    # incremental mass admitted by each successive window
+    w = []
+    prev = 0.0
+    for L in LAG_GATE_ENSEMBLE:
+        w.append(max(cum[L] / total - prev, 0.0))
+        prev = cum[L] / total
+    w = np.asarray(w) + LAG_GATE_WEIGHT_FLOOR
+    return w / w.sum()
 
 
 def _U_given_k(h_smooth: np.ndarray, po: np.ndarray, h_base: float,
@@ -133,7 +169,9 @@ def recharge_posterior(
     h_base = estimate_h_base(raw)
 
     # Pre-smooth once per ensemble member (the expensive part).
-    smooths = {w: _nan_smooth(raw, w) for w in SMOOTH_ENSEMBLE}
+    # Median filtering is edge-preserving: it removes the rise-attenuation
+    # bias of the moving mean while suppressing noise equally well.
+    smooths = {w: _nan_smooth(raw, w, kind="median") for w in SMOOTH_ENSEMBLE}
 
     # Per-spell recession rates on the default smoothing (k is robust to
     # the window choice; the window enters U directly instead).
@@ -142,7 +180,9 @@ def recharge_posterior(
     k_draws = _weighted_bootstrap_k(k_segs, weights, n_draws, rng)
 
     win_draws = rng.choice(SMOOTH_ENSEMBLE, size=n_draws)
-    lag_draws = rng.choice(LAG_GATE_ENSEMBLE, size=n_draws)
+    k_ref = float(np.median(k_draws))
+    gate_w = _lag_gate_weights(smooths[5], po, h_base, k_ref, r_cutoff_m)
+    lag_draws = rng.choice(LAG_GATE_ENSEMBLE, size=n_draws, p=gate_w)
     if correct_bias:
         bias = rng.normal(bias_factor_mean, bias_factor_std, size=n_draws)
         bias = np.clip(bias, 1.0, None)   # never deflate below the raw value
