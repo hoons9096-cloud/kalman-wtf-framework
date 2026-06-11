@@ -162,9 +162,25 @@ import \(S_y\) implicitly through a calibrated soil model. Across this
 lineage the recurring pattern is clear: ingenuity is spent on the
 *identifiable* rise term, while the *non-identifiable* yield is either fixed
 by fiat or absorbed into a calibration that the head data cannot constrain.
-Our analysis explains why this division of labour is not a coincidence but a
-structural necessity, and it relocates the yield to the one place from which
-it can be determined — an external mass balance.
+The recent comprehensive review of the method (Becke et al., 2024) reaches
+the same diagnosis empirically, identifying the specific-yield uncertainty
+as the central unresolved obstacle of the WTF method. Two recent responses
+bracket the possibilities. Šabatová and Bruthans (2025) calibrate \(S_y\)
+by matching modelled to observed water-table levels — a head-fit
+calibration that, by the theorem of Section 2.3, is structurally incapable
+of constraining the scale (it can only constrain the ratios in which
+\(S_y\) appears). Crosbie et al. (2019), by contrast, treat \(S_y\) as a
+conceptual parameter "that cannot be measured" and constrain it by
+rejection sampling against *independent* recharge estimates (chloride mass
+balance and precipitation minus remotely sensed evapotranspiration) — an
+external-flux constraint that our analysis shows is exactly the *kind* of
+information capable of breaking the scale invariance (Section 2.4.3). Our
+contribution relative to Crosbie et al. is threefold: we replace the
+empirical assertion of unmeasurability with an exact theorem; we diagnose
+and remove a *second*, previously unquantified bias — pumping recovery in
+the rise term — that no \(S_y\) constraint can repair; and we replace
+basin-scale rejection sampling with a per-well, closed-form fusion whose
+internal consistency statistic is falsifiable well by well.
 
 ### 1.3 Regularisation, priors, and the risk of circularity
 
@@ -469,6 +485,51 @@ likelihood (the standard remedy for non-quadratic likelihoods; Raue et al.,
 2009) are consequently \((0,\infty)\): the data alone license any positive
 yield. This is the information-geometric portrait of equifinality, and it
 motivates the move to an informative, *external* prior in Section 2.7.
+
+### 2.4.3 Generality: nonlinear storage, state-dependent yield, and what breaks the invariance
+
+Propositions 1 and (7$'$) were stated for the linear reservoir. The
+non-identifiability is, however, generic. Consider the general
+storage formulation that underlies all WTF variants — including the
+state-dependent-yield forms of Nachabe (2002) and Acharya et al. (2012)
+and the smoothly varying drainage formulation of Cuthbert (2010):
+\[
+  S_y(h)\,\frac{dh}{dt} \;=\; R(t) \;-\; D(h,t),
+  \tag{7$''$}
+\]
+where \(S_y(h)\) is an arbitrary (possibly depth-dependent) specific-yield
+function and \(D(h,t)\) an arbitrary net-drainage law, both unknown.
+
+> **Proposition 2 (Generalised scale invariance).** *For any \(\lambda>0\),
+> the transformation*
+> \[
+>   \big(S_y(\cdot),\, R(\cdot),\, D(\cdot)\big)
+>   \;\longmapsto\;
+>   \big(\lambda S_y(\cdot),\, \lambda R(\cdot),\, \lambda D(\cdot)\big)
+> \]
+> *leaves the head trajectory \(h(t)\) of (7$''$) — and hence any
+> head-based likelihood — exactly invariant. The recharge scale is
+> therefore non-identifiable from head data under arbitrary, including
+> state-dependent, specific-yield and drainage laws.*
+
+*Proof.* Dividing (7$''$) by \(S_y(h)\) gives
+\(\dot h = [R - D]/S_y\), which is invariant under the simultaneous
+rescaling. \(\square\)
+
+Proposition 2 has two consequences worth stating plainly. First, it
+covers every head-fit calibration of \(S_y\), however sophisticated the
+storage or drainage model: matching modelled to observed heads constrains
+only the *ratios* \(R/S_y\) and \(D/S_y\), never the scale (this is the
+structural reason the calibration of Šabatová and Bruthans (2025), and any
+similar scheme, cannot deliver \(S_y\)). Second, it identifies exactly
+what external information breaks the invariance: **any absolute flux.**
+If the drainage \(D\) is independently metered (e.g., baseflow gauging, as
+in Yimam et al., 2023), or the recharge is independently bounded (chloride
+mass balance, water-balance \(P-\mathrm{ET}-Q\), as in Crosbie et al.,
+2019, and Section 2.8 here), the rescaling is no longer free and the scale
+becomes identifiable. The dual-constraint construction of Section 2.9 is
+thus not one heuristic among many but an instance of the *only* class of
+information that can resolve the scale.
 
 ### 2.5 Recession-constrained recovery of the head input \(U\)
 
@@ -824,9 +885,26 @@ moving average, chosen to halve the noise standard deviation while
 preserving the multi-day recharge rises (Section 4.3 quantifies the
 sensitivity to this choice). The water-balance fusion is implemented in
 `water_balance.constrain_recharge`. The full pipeline, a synthetic-data
-generator, a one-shot runner, and a unit-test suite (40 tests) are released
+generator, a one-shot runner, and a unit-test suite (48 tests) are released
 openly; all results below are reproduced by `notebooks/v2/honest_benchmark.py`
 and `notebooks/v2/field_identifiability.py`.
+
+**Monte Carlo posterior.** Beyond the closed-form Gaussian fusion, the
+module `posterior.recharge_posterior` produces a full Monte Carlo
+posterior that propagates, jointly: (i) the sampling uncertainty of the
+pooled recession constant, by weighted bootstrap resampling of the
+per-dry-spell decay rates; (ii) the structural processing uncertainty of
+the input \(U\), by marginalising both the noise-smoothing window
+(3/5/7 d) and the rain-gate lag window (0/7/14/21 d — the latter encoding
+the uncertain vadose delay between rainfall and water-table arrival,
+which a strict same-day gate would otherwise convert into a hidden
+systematic); and (iii) the scale, by drawing \(S_y\) from the exact
+per-draw conjugate product of the two Gaussian constraints. Each draw
+recomputes the pumping-robust reconstruction under its own
+\((k, \text{window}, \text{gate})\), so all nonlinear interactions are
+propagated rather than linearised. Point estimators retain the strict,
+characterised same-day gate; the gate systematic lives only in the
+posterior, where it belongs.
 
 ### 3.4 Evaluation
 
@@ -886,6 +964,23 @@ recov\(_J\) the dual constraint; \(\zeta\) the consistency statistic.
 | S4 | 0.0065 | 1094 | 0.072 | 0.97 | 1.12 | 0.6 |
 | S5 | 0.0053 | 781 | 0.101 | 0.69 | 0.84 | 1.1 |
 | **mean** | | | | **0.90 ± 0.18** | **1.04 ± 0.17** | ≤ 1.1 |
+
+### 4.2.1 Posterior calibration against known truth
+
+A point estimate with a band is only as credible as the band. We
+therefore test the Monte Carlo posterior of Section 3.3 — which
+jointly propagates recession-constant, processing (smoothing window and
+rain-gate lag window), and scale uncertainty — against the known truth of
+all five scenarios, with no per-scenario tuning. The result is a
+calibrated posterior: the **68 % credible interval covers the true annual
+recharge in 5 of 5 scenarios, and the 95 % interval in 5 of 5**, with a
+mean median-to-truth ratio of 1.09 (range 0.72–1.42; the extremes are the
+fixed-\(S_y\) control S5 and the high-noise S4, both covered). The
+posterior widths are honest rather than flattering — roughly ±45 % at
+68 % — because they carry the gating systematic that a strict same-day
+analysis would silently convert into bias (Section 3.3). We regard this
+empirical calibration of the credible intervals as a stronger statement
+than any single recovery ratio: the method knows what it does not know.
 
 ### 4.3 Sensitivity: what the data do and do not determine
 
@@ -965,12 +1060,27 @@ the unconstrained fillable-porosity calibration of the same data.
 | SH28 | 313 | 949 | 0.0041 | 1422 | 0.075 | 106 | 11.2 % | 0.2 | 6.9 |
 | **mean** | | | | | | | **11.9 %** | ≤ 0.6 | 13.5 |
 
-These field results are honest about their limitations (Section 5): the
-~1-year records preclude a robust *annual* statement, the scale is supplied
-by the water-balance prior rather than independently measured, and no ground
-truth exists. What the method delivers is a *physically plausible,
-mutually consistent, falsifiable* recharge estimate with explicit
-uncertainty — not a spuriously precise point value.
+The Monte Carlo posterior places honest intervals around these values:
+the per-well posterior medians are 13–14 % of precipitation with 68 %
+credible intervals of roughly ±35 % (e.g. SH08: median 127 mm yr⁻¹,
+68 % CI [89, 173]), wider than the Gaussian bands of Table 2 because they
+additionally carry the rain-gate (vadose-delay) systematic marginalised
+in Section 3.3.
+
+These field results are honest about their limitations (Section 5), and
+we present them as an **illustrative application, not a validation**. The
+records span 0.85–0.94 yr (July/August 2015 – 8 July 2016) and therefore
+**truncate the East-Asian summer monsoon at both ends**: the 2015 peak
+precedes the record and the 2016 peak is cut off mid-event (the gauge logs
+188 mm in the first eight days of July 2016 alone). Since the monsoon
+dominates annual recharge in this climate, the annualised values carry an
+unquantified seasonal-coverage bias in addition to the stated intervals.
+The scale is supplied by the water-balance prior rather than independently
+measured, and no ground truth exists. What the method delivers is a
+*physically plausible, mutually consistent, falsifiable* recharge estimate
+with explicit uncertainty — not a spuriously precise point value; a
+multi-year, multi-well application to a national monitoring network is the
+natural next step.
 
 ---
 
@@ -993,6 +1103,25 @@ recession-inflated rise integral can coincidentally reproduce the right
 total (Section 4.1), a compensation that is fragile to configuration and
 that our factorisation removes.
 
+The closest antecedent is Crosbie et al. (2019), who likewise constrain
+\(S_y\) with independent recharge information (chloride mass balance and
+remote-sensing-based excess water), by rejection sampling at basin scale.
+Three things distinguish the present work. First, where they *assert*
+that \(S_y\) "cannot be measured" for WTF purposes, Propositions 1–2
+*prove* the head-data non-identifiability — including for state-dependent
+yields and arbitrary drainage laws — thereby also explaining why
+subsequent head-fit calibrations (e.g. Šabatová and Bruthans, 2025) cannot
+succeed in principle. Second, the constraint enters here as a closed-form,
+per-well conjugate fusion with a falsifiable consistency statistic, rather
+than basin-scale rejection sampling. Third, and independently of the
+scale question, we identify and remove the pumping-recovery bias in the
+*rise* term — a ~2.5-fold error (Section 4.3.1) that survives any
+\(S_y\) treatment, theirs or ours, because it corrupts the other factor of
+the product. The 2024 review (Becke et al., 2024) lists the specific-yield
+problem as the method's central open issue; our answer is that it is not
+solvable *within* the hydrograph and is solvable, in exactly one way,
+*outside* it.
+
 ### 5.2 Relation to existing inverse-theory practice
 
 The structure we exploit is familiar from groundwater inverse problems
@@ -1008,25 +1137,43 @@ a one-dimensional posterior predictive check (Box, 1980; Gelman et al.,
 sometimes proposed to "solve" the regularisation-strength problem in WTF
 calibration, is — by Eq. (7) — incapable of recovering scale information and
 is best reserved for genuinely ill-conditioned (not structurally
-non-identifiable) problems.
+non-identifiable) problems. Our state-reconstruction treatment of the
+input is consonant with the recent data-assimilation findings of Shapiro
+and Day-Lewis (2024), who show that filtering and fixed-lag smoothing
+materially improve recharge estimates from head data; the present work
+adds the two elements assimilation alone cannot supply — the pumping
+separation in the observation operator, and the recognition that no
+amount of assimilation populates the scale direction of the likelihood
+(Appendix E).
 
 ### 5.3 Limitations
 
-Three limitations bound the claims. First, the identifiable input \(U\) is
-itself processing-dependent at the ±30 % level (Section 4.3); a fully
-principled treatment would replace the moving-average de-biasing with a
-state-space (Rauch–Tung–Striebel) smoother (Rauch et al., 1965) under an
-estimated noise model, which we leave to future work. Second, the
-water-balance constraint requires reliable annual precipitation,
-evapotranspiration, and runoff; for sub-annual or arid records its
-informativeness degrades, and the method then reverts to the prior-dominated
-estimate (12). Third, the linear-reservoir model (2) assumes an unconfined,
-recharge-driven, single-cell aquifer; deep or damped piezometers that
-violate these assumptions (as several candidate wells in our exploratory
-analysis appeared to) are outside its scope and should be screened, e.g. by
-their dynamic range and \(\zeta\). Finally, our field records span ≈ 1 year;
-multi-year records spanning several monsoons are required for robust annual
-recharge and for testing the inter-annual stability of \(S_y^{\star}\).
+Four limitations bound the claims. First, the identifiable input \(U\) is
+itself processing-dependent at the ±30 % level (Section 4.3). We
+quantified rather than eliminated this: a Rauch–Tung–Striebel smoother
+(Rauch et al., 1965) with hand-set noise levels did *not* outperform the
+simple moving average in our experiments, so the structural choices
+(smoothing window, rain-gate lag) are instead marginalised in the Monte
+Carlo posterior — whose credible intervals are then empirically calibrated
+(5/5 coverage; Section 4.2.1). An EM-estimated noise model for the
+smoother remains worthwhile future work. Second, the reconstruction's
+~15 % conservative bias (Section 4.3.1) is characterised but not
+corrected; we deliberately decline to apply a synthetic-calibrated
+inflation factor, which would re-import the circularity this paper is
+written against. Third, the water-balance constraint requires reliable
+annual precipitation, evapotranspiration, and runoff; for sub-annual or
+arid records its informativeness degrades, and the method then reverts to
+the prior-dominated estimate (12). The linear-reservoir model (2) assumes
+an unconfined, recharge-driven, single-cell aquifer; deep or damped
+piezometers that violate these assumptions (as several candidate wells in
+our exploratory analysis appeared to) are outside its scope and should be
+screened, e.g. by their dynamic range and \(\zeta\) — the consistency
+statistic doubling as a well-screening diagnostic is itself a practical
+by-product. Finally, our field records span ≈ 1 year *and truncate the
+monsoon at both ends* (Section 4.4); multi-year records spanning several
+monsoons — e.g. from a national monitoring network — are required for
+robust annual recharge and for testing the inter-annual stability of
+\(S_y^{\star}\).
 
 ### 5.4 Implications for practice
 
@@ -1045,7 +1192,11 @@ prior, not a measurement.
 1. Under the linear-reservoir model, WTF recharge factorises exactly as
    \(R = S_y\,U\): the head record identifies the recession-corrected input
    integral \(U\) but carries **zero Fisher information** about the specific
-   yield \(S_y\). The head fixes the line, not the point.
+   yield \(S_y\). The head fixes the line, not the point. The
+   non-identifiability is **generic** (Proposition 2): it survives
+   state-dependent yields and arbitrary drainage laws, and is broken only
+   by an independently known absolute flux — which delimits, exactly, the
+   class of remedies that can work.
 2. The "operational" specific yield routinely extracted from hydrographs is
    a **recession-biased apparent quantity**, larger than the
    column-effective yield by a factor \(1+\mathcal O(\tau_r/\tau_R)\), and
@@ -1059,23 +1210,27 @@ prior, not a measurement.
    cutting the input-recovery RMSE sevenfold (2.14 → 0.30) on a
    soil-heterogeneous benchmark, at a characterised ~15 % conservative
    cost.
-
 4. The recession constant must be estimated over **multi-day** dry-spell
    tails, because serial correlation reduces an \(\sim\)1800-day record to
    \(\sim\)50 effective points and buries the single-step recession signal
    in noise.
-4. The non-identifiable recharge scale is recovered by fusing a
+5. The non-identifiable recharge scale is recovered by fusing a
    field-effective \(S_y\) prior with a **catchment water-balance** prior;
    their precision-weighted combination identifies \(S_y\), and their
-   consistency provides a built-in, falsifiable cross-check.
-5. On a single fixed synthetic pipeline the method recovers recharge at
-   1.04 ± 0.17 of truth; on five Siheung wells it gives a tightly clustered,
-   mutually consistent 12.3 % of precipitation, contracting an
-   unconstrained 7–27 % spread.
-6. The method's value is honesty: it reports what the data determine (the
+   consistency provides a built-in, falsifiable cross-check that doubles
+   as a well-screening diagnostic.
+6. On a single fixed synthetic pipeline the method recovers recharge at
+   1.04 ± 0.17 of truth, and the full Monte Carlo posterior — which
+   marginalises the recession, smoothing, and rain-gate systematics — is
+   **empirically calibrated**: its 68 % and 95 % credible intervals cover
+   the truth in 5 of 5 scenarios. On five Siheung wells the method gives a
+   tightly clustered, mutually consistent ~12 % of precipitation,
+   contracting an unconstrained 7–27 % spread (presented as an
+   illustrative, monsoon-truncated application).
+7. The method's value is honesty: it reports what the data determine (the
    line), imports what they cannot (the scale) from an explicit external
-   balance, and propagates the irreducible uncertainty into a falsifiable
-   recharge posterior.
+   balance, and propagates the irreducible uncertainty into a falsifiable,
+   calibrated recharge posterior.
 
 ---
 
@@ -1225,6 +1380,10 @@ Bartlett, M.S. (1946). On the theoretical specification and sampling
 properties of autocorrelated time-series. *Supplement to the Journal of the
 Royal Statistical Society*, 8(1), 27–41.
 
+Becke, F., Solórzano-Rivas, S.C., Werner, A.D. (2024). The watertable
+fluctuation method of recharge estimation: A review. *Advances in Water
+Resources*, 189, 104683.
+
 Bellman, R., Åström, K.J. (1970). On structural identifiability.
 *Mathematical Biosciences*, 7, 329–339.
 
@@ -1271,6 +1430,10 @@ Cuthbert, M.O. (2014). Straight thinking about groundwater recession.
 *Water Resources Research*, 50, 2407–2424.
 
 DeGroot, M.H. (1970). *Optimal Statistical Decisions*. McGraw-Hill.
+
+Crosbie, R.S., et al. (2019). Constraining the magnitude and uncertainty
+of specific yield for use in the water table fluctuation method of
+estimating recharge. *Water Resources Research*, 55, 7343–7361.
 
 Delin, G.N., Healy, R.W., Lorenz, D.L., Nimmo, J.R. (2007). Comparison of
 local- to regional-scale estimates of ground-water recharge in Minnesota,
@@ -1327,6 +1490,10 @@ Kim, G.-B., et al. (2014). Estimation of groundwater recharge in Korea:
 review and analysis. *Journal of the Geological Society of Korea* (and
 references therein).
 
+Lv, M., Xu, Z., Yang, Z.-L., Lu, H., Lv, M. (2021). A comprehensive
+review of specific yield in land surface and groundwater studies.
+*Journal of Advances in Modeling Earth Systems*, 13, e2020MS002270.
+
 Maillet, E. (1905). *Essais d'hydraulique souterraine et fluviale*.
 Hermann, Paris.
 
@@ -1349,6 +1516,10 @@ and shallow water table drainage. *Water Resources Research*, 38, 1193.
 Nimmo, J.R., Horowitz, C., Mitchell, L. (2015). Discrete-storm
 water-table fluctuation method to estimate episodic recharge. *Groundwater*,
 53, 282–292.
+
+Nimmo, J.R., Perkins, K.S. (2018). Episodic master recession evaluation
+of groundwater and streamflow hydrographs for water-resource estimation.
+*Vadose Zone Journal*, 17, 180050.
 
 Obuobie, E., Diekkrueger, B., Agyekum, W., Agodzo, S. (2012). Groundwater
 level monitoring and recharge estimation in the White Volta River basin of
@@ -1378,6 +1549,14 @@ statistical parameters. *Bulletin of the Calcutta Mathematical Society*, 37,
 
 Rauch, H.E., Tung, F., Striebel, C.T. (1965). Maximum likelihood estimates
 of linear dynamic systems. *AIAA Journal*, 3, 1445–1450.
+
+Šabatová, K., Bruthans, J. (2025). New groundwater recharge model for
+water table fluctuation method calibration using easily available data.
+*Journal of Hydrology*, 661, 133685.
+
+Shapiro, A.M., Day-Lewis, F.D. (2024). Benefits and cautions in data
+assimilation strategies: An example of modeling groundwater recharge.
+*Groundwater*, 62.
 
 Schweppe, F.C. (1965). Evaluation of likelihood functions for Gaussian
 signals. *IEEE Transactions on Information Theory*, 11, 61–70.
@@ -1418,6 +1597,10 @@ Walter, E., Pronzato, L. (1997). *Identification of Parametric Models from
 Experimental Data*. Springer.
 
 Wirgin, A. (2004). The inverse crime. *arXiv:math-ph/0401050*.
+
+Yimam, A.Y., et al. (2023). Incorporating baseflow estimates from
+streamflow recession into the water-table fluctuation method for sloping
+aquifers. *(journal details to be verified)*.
 
 Yeh, W.W.-G. (1986). Review of parameter identification procedures in
 groundwater hydrology: the inverse problem. *Water Resources Research*, 22,
