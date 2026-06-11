@@ -158,8 +158,44 @@ def estimate_U_pumping_robust(
     )
 
 
+def wtf_response_score(po_m: np.ndarray, ho_m: np.ndarray,
+                       max_lag: int = 30, smooth_window: int = 5,
+                       r_cutoff_m: float = 0.002) -> float:
+    """WTF-suitability screen: the maximum positive rainfall->reconstructed
+    -input cross-correlation over 0..``max_lag`` days.
+
+    A genuine unconfined, recharge-driven well scores high (the input
+    follows rainfall); a confined or strongly damped piezometer, or a dead
+    well with no recharge response, scores near zero — *independently of
+    the specific-yield scale*. It complements the consistency statistic:
+    the response score screens whether the WTF model applies at all, while
+    the consistency statistic screens whether the external priors agree
+    with a well to which it does apply.
+    """
+    raw = np.asarray(ho_m, dtype=float)
+    po = np.asarray(po_m, dtype=float)
+    n = len(raw)
+    h_base = estimate_h_base(raw)
+    hs = _nan_smooth(raw, smooth_window, kind="median")
+    k, _ = estimate_recession_k(hs, po, h_base)
+    hat = reconstruct_recession_baseline(hs - h_base, k)
+    u = np.zeros(n)
+    for t in range(n - 1):
+        if np.isfinite(hat[t]) and np.isfinite(hat[t + 1]):
+            u[t] = max((hat[t + 1] - hat[t]) + k * hat[t], 0.0)
+    r = np.where(np.isnan(po), 0.0, po)[:n]
+    best = 0.0
+    for L in range(0, max_lag + 1):
+        a = r[:-L] if L else r
+        b = u[L:] if L else u
+        if len(a) > 30 and a.std() > 0 and b.std() > 0:
+            best = max(best, float(np.corrcoef(a, b)[0, 1]))
+    return best
+
+
 __all__ = [
     "PumpingRobustResult",
     "reconstruct_recession_baseline",
     "estimate_U_pumping_robust",
+    "wtf_response_score",
 ]

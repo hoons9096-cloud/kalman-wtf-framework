@@ -93,3 +93,37 @@ def test_baseline_holds_through_dip():
     hat = reconstruct_recession_baseline(x_dip, k)
     # reconstructed series should not exceed the original recession anywhere
     assert np.all(hat <= x + 1e-9)
+
+
+def test_response_score_separates_wtf_from_nonwtf():
+    from framework_v2.pumping_robust import wtf_response_score
+    # good WTF well: recharge-driven rises follow rain
+    rain, h = _build_well(k=0.01, sy=0.1, n=1200, event_every=18)
+    good = wtf_response_score(rain, h)
+    # dead well: pure recession + noise, no recharge response
+    rng = np.random.default_rng(3)
+    n = 1200
+    dead = 3.0 * (1 - 0.01) ** np.arange(n) + 10.0 + rng.normal(0, 0.02, n)
+    bad = wtf_response_score(rain, dead)
+    assert good > 0.2
+    assert bad < 0.15
+    assert good > bad
+
+
+def test_zeta_flags_gross_prior_conflict():
+    # data-anchored Sy ~ 0.1; a wildly wrong prior must raise zeta
+    from framework_v2.pumping_robust import estimate_U_pumping_robust
+    from framework_v2.water_balance import constrain_recharge_from_U
+    rain, h = _build_well(k=0.01, sy=0.1, n=1500, event_every=15)
+    P = rain.sum() * 1000 / (len(h) / 365.25)
+    pr = estimate_U_pumping_robust(rain, h, rain_lag_window=7)
+    # correct-ish coefficient so the water-balance arm anchors near truth
+    c = (0.4 * rain.sum() * 1000 / (len(h) / 365.25)) / P
+    z_ok = constrain_recharge_from_U(pr.U_annual_mm, pr.n_years, P,
+                                     sy_prior_mean=0.10, sy_prior_std=0.03,
+                                     rch_coef_mean=c, rch_coef_std=0.03).consistency_sigma
+    z_bad = constrain_recharge_from_U(pr.U_annual_mm, pr.n_years, P,
+                                      sy_prior_mean=0.30, sy_prior_std=0.03,
+                                      rch_coef_mean=c, rch_coef_std=0.03).consistency_sigma
+    assert z_bad > z_ok
+    assert z_bad > 2.0

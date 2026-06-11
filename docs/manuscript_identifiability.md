@@ -1,4 +1,4 @@
-# Recharge is the product of an identifiable head integral and a non-identifiable specific yield: pumping-robust estimation and water-balance–constrained identification for the water-table fluctuation method
+# Pumping recovery is the dominant bias in water-table-fluctuation recharge, and specific yield is non-identifiable from head data: a pumping-robust, water-balance–constrained reformulation
 
 **J. Choi¹**, and co-authors
 
@@ -20,56 +20,46 @@ Corresponding author: hoons9096@gmail.com
 
 The water-table fluctuation (WTF) method estimates diffuse groundwater
 recharge as the product of a specific yield and an observed rise of the
-water table, \(R = S_y\,\Delta h\). Despite six decades of use, the method
-carries a structural weakness that is rarely stated explicitly: the head
-record constrains the rise term but is almost wholly uninformative about
-the specific yield, so the recharge magnitude is **non-identifiable from
-head data alone**. We formalise this statement. Writing the unconfined
-aquifer as a single linear-reservoir state-space system, we show that the
-maximum-likelihood estimate of recharge factorises exactly as
-\(R = S_y\,U\), where \(U\) — the cumulative, recession-corrected,
-head-equivalent recharge input — is a structurally identifiable functional
-of the head and rainfall records, whereas \(S_y\) enters the likelihood
-only as a multiplicative scale on which the Fisher information vanishes
-along the recharge-input direction. The familiar "operational" specific
-yield \(S_{y}^{\mathrm{op}}=\sum R/\sum(\Delta h)^{+}\) is shown to be a
-recession-biased apparent quantity, systematically larger than the
-column-effective specific yield by a factor controlled by the ratio of
-recession to recharge time, and distinct again from the near-water-table
-fillable porosity, which is capillary-fringe limited and an order of
-magnitude smaller at daily resolution. We resolve the three-way ambiguity
-by (i) estimating the recession constant from a multi-day log-linear fit
-of dry-spell tails — necessary because, for slow systems, the daily
-recession decrement is dominated by observation noise; (ii) recovering
-\(U\) robustly, by reconstructing the head along the recession baseline
-through pumping excursions — which we show are the *dominant* bias in the
-input integral, inflating it by ~2.5-fold when pumping recovery is
-mis-read as recharge; and (iii)
-identifying \(S_y\) by fusing two orthogonal, head-free constraints — a
-field-effective specific-yield prior and a catchment water-balance recharge
-prior — in a precision-weighted Bayesian update whose internal consistency
-provides a built-in cross-validation. On a five-scenario synthetic
-benchmark with known truth, a single fixed pipeline recovers annual
-recharge with a mean ratio of 1.04 ± 0.17. On a separate
-soil-heterogeneous ensemble spanning an order of magnitude in true
-specific yield, we isolate the input estimator and show that the
-recession-baseline reconstruction removes the dominant pumping bias,
-cutting the recovery error of the head-input integral from
-RMSE 2.14 (a moving-average estimator; mean recovery 2.8) to RMSE 0.16
-(mean recovery 1.00, exactly unbiased under the combined disturbances) —
-a thirteenfold reduction — once the noise pre-filter is made
-edge-preserving (median rather than mean), at the cost of a
-characterised ~15 % conservative low bias on clean records. Applied to five alluvial
-monitoring wells in Siheung, Republic of Korea, the method yields
-recharge ratios of 10.9–14.2 % of precipitation (mean 12.3 %), tightly
-clustered within independent catchment water-balance bounds and mutually
-consistent to within 1.1 σ across all wells — contracting the 7–27 %
-spread produced by an unconstrained calibration. The contribution is not a
-"more accurate" WTF estimator but an *honest* one: a method that separates
-what the data can and cannot determine, attaches the irreducible
-prior-dependence of the recharge scale to an explicit, falsifiable external
-constraint, and reports the recharge as a posterior distribution rather
-than a point value.
+water table, \(R = S_y\,\Delta h\). We address its two multiplicative
+factors in turn, and the practically dominant result concerns the rise
+term. **Pumping recovery — a drawdown's return to its pre-pumping level —
+is read by standard WTF estimators as recharge, and we show it is the
+single largest bias in the head-input integral, inflating it ~2.5-fold,
+ahead of observation noise.** Because abstraction is ubiquitous and this
+bias corrupts the rise factor, it survives *any* treatment of the
+specific yield. We remove it with a recession-baseline reconstruction
+that exploits the physical asymmetry of the episodic master recession
+(recharge raises the recession envelope permanently; pumping returns to
+it), cutting the input-recovery error from RMSE 2.14 to 0.16 — a
+thirteenfold reduction — on a soil-heterogeneous synthetic benchmark.
+The second factor is the specific yield, and here the message is a
+limit rather than a fix: writing the unconfined aquifer as a
+linear-reservoir state-space system, we show the recharge factorises
+exactly as \(R = S_y\,U\) with \(U\) — the cumulative,
+recession-corrected, head-equivalent input — a structurally identifiable
+functional of the records, whereas \(S_y\) enters the likelihood only as
+a multiplicative scale on which the Fisher information **vanishes
+exactly**; the non-identifiability is generic (it survives
+state-dependent yields and arbitrary drainage laws) and is broken only by
+an independently known absolute flux — so we supply one. The recharge
+scale is fixed by fusing the field-effective \(S_y\) prior with a
+catchment water-balance recharge prior in a precision-weighted Bayesian
+update, and we propagate recession, processing, and scale uncertainty
+into a Monte Carlo posterior whose 68 % and 95 % credible intervals are
+empirically calibrated against known truth (covering it in 5 of 5
+synthetic scenarios). A consistency statistic between the two priors acts
+as a graded screen for prior–data conflict; combined with a
+response-strength screen for non-applicable (confined/dead) wells, it
+flags the deliberate failure cases we construct, while we characterise its
+limits honestly (it is insensitive to a proportional precipitation error).
+Applied to five alluvial monitoring wells in Siheung, Republic of Korea —
+an illustrative, monsoon-truncated application, not a validation — the
+method yields tightly clustered recharge of ~13 % of precipitation within
+independent catchment bounds. The contribution is not a "more accurate"
+\(S_y\) but a correctly *factored* WTF method: it removes a dominant,
+previously conflated bias from the rise term, separates what the head can
+and cannot determine, and reports recharge as a calibrated posterior
+rather than a spuriously precise point value.
 
 **Keywords:** groundwater recharge; water-table fluctuation; specific
 yield; identifiability; equifinality; Bayesian inverse problem;
@@ -763,12 +753,24 @@ statistic
   \tag{16}
 \]
 Under the null hypothesis that both constraints and the identifiable \(U\)
-are correct, \(\zeta\) is an \(\mathcal O(1)\) standard normal deviate; a
-large \(\zeta\) falsifies one of the inputs (wrong soil class, rejected
-recharge, mis-estimated \(U\), or a non-WTF well). Equation (16) is a
-posterior predictive check in the sense of Gelman et al. (2013) and Box
-(1980), and it is the mechanism by which the method, despite resting on a
-prior-determined scale, remains *falsifiable* rather than merely assumed.
+are correct, \(\zeta\) is an \(\mathcal O(1)\) standard normal deviate; an
+elevated \(\zeta\) signals a prior–data conflict — most diagnostically, a
+wrong soil-texture prior. Equation (16) is a one-dimensional posterior
+predictive check (Box, 1980; Gelman et al., 2013). We stress that it is a
+**graded screen, not a sharp test**: Section 4.2.2 deliberately breaks
+each assumption and shows that \(\zeta\) flags gross prior conflicts and,
+together with a response-strength screen (below), non-applicable wells,
+but is only mildly elevated by a moderate \(S_y\)-prior error and is
+insensitive to a *proportional* precipitation error (which rescales both
+arms of the comparison). The consistency statistic addresses whether the
+external priors agree with a well to which the WTF model applies; a
+distinct, scale-independent **response score** — the maximum positive
+rainfall→input cross-correlation — addresses whether the model applies at
+all, screening out confined, strongly damped, or dead piezometers whose
+input bears no relation to rainfall. The two screens are complementary
+and neither is circular: both are evaluated against held-out information
+(the texture prior and the rainfall series, respectively), not against the
+head fit they assess.
 
 ### 2.9.1 Full uncertainty propagation
 
@@ -1000,6 +1002,40 @@ analysis would silently convert into bias (Section 3.3). We regard this
 empirical calibration of the credible intervals as a stronger statement
 than any single recovery ratio: the method knows what it does not know.
 
+### 4.2.2 Diagnostic power and limits of the consistency and response screens
+
+A falsifiable check must demonstrably fail when its assumptions are
+violated. We construct a controlled well (linear reservoir, true
+\(S_y=0.12\), recharge 10 % of precipitation, short vadose lag, correct
+external constraints) and break one assumption at a time. Table 4 reports
+the response score and \(\zeta\).
+
+**Table 4.** Falsification of the two screens. The response score (max
+rainfall→input cross-correlation) and \(\zeta\) (Eq. 16) on a correct well
+and five deliberate violations.
+
+| case | response | \(\zeta\) (σ) | flagged by |
+|---|---|---|---|
+| (a) correct well, correct priors | 0.40 | 0.3 | — (consistent) |
+| (b) wrong soil class, \(S_y\) prior 0.03 | 0.40 | 1.8 | (elevated) |
+| (c) wrong soil class, \(S_y\) prior 0.27 | 0.40 | 3.6 | \(\zeta\) |
+| (d) precipitation overstated 2× | 0.40 | 1.4 | (mildly elevated) |
+| (e) confined/damped piezometer | 0.34 | 3.0 | \(\zeta\) |
+| (f) dead well (no recharge response) | 0.06 | 1.9 | response score |
+
+The screens work as designed and their limits are explicit. The correct
+case (a) is sharply separated (\(\zeta=0.3\)) from every error case
+(\(\zeta\ge 1.4\)). A gross soil-class error (c) and a non-physical damped
+response (e) are flagged by \(\zeta>2\); a dead well (f), which \(\zeta\)
+alone misses, is caught by the response score (0.06 vs ≥0.34 for genuine
+wells). Two cases expose honest limits: a moderate \(S_y\)-prior error (b)
+is only elevated (1.8), and a *proportional* precipitation error (d) is
+weakly detected (1.4) because scaling \(P\) rescales both the
+water-balance estimate and its uncertainty. We therefore present \(\zeta\)
+as a graded conflict screen rather than a sharp hypothesis test, and pair
+it with the response score; together they flag the constructed failures
+while we state plainly what each cannot catch.
+
 ### 4.3 Sensitivity: what the data do and do not determine
 
 Figure 3 separates the two uncertainty sources. Panel A confirms (12): the
@@ -1120,8 +1156,9 @@ known difficulty to a structural theorem; (ii) the explicit separation of
 the recharge into an identifiable input \(U\) and a non-identifiable scale
 \(S_y\); (iii) the recognition that the recharge scale must be imported from
 an orthogonal constraint, with the catchment water balance as the natural
-candidate; and (iv) the use of the prior–data consistency as a falsifiable
-check. The reformulation also explains, mechanistically, why
+candidate; and (iv) a graded consistency screen, paired with a response-strength
+screen, whose diagnostic power and limits we establish by deliberate
+falsification. The reformulation also explains, mechanistically, why
 fillable-porosity WTF engines can return apparently good recharge for the
 wrong reason: an underestimated yield multiplied by an overestimated,
 recession-inflated rise integral can coincidentally reproduce the right
@@ -1242,9 +1279,11 @@ prior, not a measurement.
    in noise.
 5. The non-identifiable recharge scale is recovered by fusing a
    field-effective \(S_y\) prior with a **catchment water-balance** prior;
-   their precision-weighted combination identifies \(S_y\), and their
-   consistency provides a built-in, falsifiable cross-check that doubles
-   as a well-screening diagnostic.
+   their precision-weighted combination identifies \(S_y\), and a graded
+   consistency screen — paired with a scale-independent response-strength
+   screen for non-applicable wells — flags prior–data conflicts and
+   non-WTF wells in deliberate falsification tests, with characterised
+   limits (insensitive to proportional precipitation error).
 6. On a single fixed synthetic pipeline the method recovers recharge at
    1.04 ± 0.17 of truth, and the full Monte Carlo posterior — which
    marginalises the recession, smoothing, and rain-gate systematics — is
