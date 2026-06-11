@@ -55,5 +55,6 @@ data/benchmark_*.csv
 data/field_v2*.csv
 data/ablation_sh22.csv
 data/sh22_sn_sweep.csv
+data/honest_benchmark.csv
 data/kma_pressure/
 PHASE_A_RESULTS.md
