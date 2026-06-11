@@ -134,6 +134,35 @@ def estimate_recession_k(
     (k, rmse) : recession constant (per day) and the RMSE of the
         recession-only one-step prediction on the declining pairs (m).
     """
+    k_segs, weights, rmse = recession_k_segments(
+        ho_m, po_m, h_base, r_cutoff_m=r_cutoff_m,
+        min_above_base_m=min_above_base_m, min_run=min_run)
+    if len(k_segs) == 0:
+        return 0.005, np.nan
+    # length-weighted median of per-segment decay rates
+    order = np.argsort(k_segs)
+    ks = np.asarray(k_segs)[order]
+    ws = np.asarray(weights, dtype=float)[order]
+    cw = np.cumsum(ws)
+    k = float(ks[np.searchsorted(cw, 0.5 * cw[-1])])
+    return max(k, 1e-4), rmse
+
+
+def recession_k_segments(
+    ho_m: np.ndarray,
+    po_m: np.ndarray,
+    h_base: float,
+    r_cutoff_m: float = 0.002,
+    min_above_base_m: float = 0.05,
+    min_run: int = 8,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    """Per-dry-spell recession-rate estimates (k_segs, weights, rmse).
+
+    Exposes the spell-to-spell spread of the multi-day log-linear fits so
+    that the *uncertainty* of the pooled recession constant can be
+    propagated (e.g. by bootstrap resampling in the posterior module).
+    Weights are the per-spell sample counts used in the regression.
+    """
     ho = np.asarray(ho_m, dtype=float)
     po = np.asarray(po_m, dtype=float)
 
@@ -163,16 +192,8 @@ def estimate_recession_k(
             weights.append(int(ok.sum()))
             pred = np.exp(A @ sol)
             sse += float(np.sum((dd - pred) ** 2)); ssn += int(ok.sum())
-    if not k_segs:
-        return 0.005, np.nan
-    # length-weighted median of per-segment decay rates
-    order = np.argsort(k_segs)
-    ks = np.asarray(k_segs)[order]
-    ws = np.asarray(weights, dtype=float)[order]
-    cw = np.cumsum(ws)
-    k = float(ks[np.searchsorted(cw, 0.5 * cw[-1])])
     rmse = float(np.sqrt(sse / ssn)) if ssn else np.nan
-    return max(k, 1e-4), rmse
+    return np.asarray(k_segs), np.asarray(weights, dtype=float), rmse
 
 
 def head_equivalent_input(
@@ -278,6 +299,7 @@ __all__ = [
     "FreeSyResult",
     "estimate_h_base",
     "estimate_recession_k",
+    "recession_k_segments",
     "head_equivalent_input",
     "invert_free_sy",
     "implied_sy",

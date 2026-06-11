@@ -92,13 +92,38 @@ def reconstruct_recession_baseline(h_def: np.ndarray, k: float) -> np.ndarray:
     return hat
 
 
+def _rain_recent_mask(po: np.ndarray, r_cutoff_m: float,
+                      lag_window: int) -> np.ndarray:
+    """True where rain fell on the day or within the preceding
+    ``lag_window`` days. With a vadose-zone delay, recharge-driven rises
+    arrive days after the rain; a same-day gate silently discards them.
+    Widening the gate is safe in combination with the recession-baseline
+    reconstruction, which already rejects pumping recoveries and
+    below-baseline noise on the admitted days."""
+    rain = po > r_cutoff_m
+    if lag_window <= 0:
+        return rain
+    out = rain.copy()
+    for s in range(1, lag_window + 1):
+        out[s:] |= rain[:-s]
+    return out
+
+
 def estimate_U_pumping_robust(
     po_m: np.ndarray,
     ho_m: np.ndarray,
     smooth_window: int = 5,
     r_cutoff_m: float = 0.002,
+    rain_lag_window: int = 0,
 ) -> PumpingRobustResult:
-    """Pumping-robust annual head-equivalent recharge input U' (mm yr⁻¹)."""
+    """Pumping-robust annual head-equivalent recharge input U' (mm yr⁻¹).
+
+    ``rain_lag_window`` widens the rain gate to admit vadose-lagged
+    recharge arriving after the causative rainfall. The default (0) keeps
+    the strict same-day gate of the characterised point estimator; the
+    gate-width systematic is marginalised in `posterior.recharge_posterior`
+    rather than baked into the point estimate.
+    """
     raw = np.asarray(ho_m, dtype=float)
     po = np.asarray(po_m, dtype=float)
     n = len(raw)
@@ -114,7 +139,7 @@ def estimate_U_pumping_robust(
     for t in range(n - 1):
         if np.isfinite(hat[t]) and np.isfinite(hat[t + 1]):
             u[t] = (hat[t + 1] - hat[t]) + k * hat[t]
-    rain = po[:n] > r_cutoff_m
+    rain = _rain_recent_mask(po[:n], r_cutoff_m, rain_lag_window)
     U_total = float(np.nansum(np.where(rain & np.isfinite(u),
                                        np.maximum(u, 0.0), 0.0)))
     return PumpingRobustResult(

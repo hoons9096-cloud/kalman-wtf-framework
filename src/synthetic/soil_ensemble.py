@@ -73,14 +73,19 @@ class SoilWell:
 
 def _effective_true_sy(h_true: np.ndarray, recharge_mm: np.ndarray,
                        k: float, rain_m: np.ndarray,
-                       h_base: float = 0.0, r_cutoff_m: float = 0.002) -> float:
+                       h_base: float = 0.0, r_cutoff_m: float = 0.002,
+                       rain_lag_window: int = 0) -> float:
     """True effective Sy = total recharge / recession-corrected positive
     head-input integral, evaluated on the *noise-free* true head with the
-    *same rain-masked* definition the estimator uses, so that the true Sy
-    combined with a clean-head U recovers unity by construction."""
+    *same lag-widened rain gate* the estimator uses (vadose-lagged recharge
+    arrives after the rain), so that the true Sy combined with a clean-head
+    U recovers unity by construction."""
     dh = np.diff(h_true)
     u = dh + k * (h_true[:-1] - h_base)
-    mask = rain_m[:len(u)] > r_cutoff_m
+    rain = rain_m[:len(u)] > r_cutoff_m
+    mask = rain.copy()
+    for s in range(1, rain_lag_window + 1):
+        mask[s:] |= rain[:-s]
     U = float(np.sum(np.where(mask, np.maximum(u, 0.0), 0.0)))
     R = float(np.nansum(recharge_mm)) / 1000.0
     return R / U if U > 0 else np.nan
